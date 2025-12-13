@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ProjectCard } from './components/ProjectCard';
 import { GeminiChat } from './components/GeminiChat';
 import { ProjectForm } from './components/ProjectForm';
-import { fetchProjects, createProject, updateProject, deleteProject } from './services/projectService';
+import { fetchProjects, createProject, updateProject, deleteProject, uploadImage } from './services/projectService';
 import { Category, Project } from './types';
 import { Search, Layers, Github, Linkedin, Mail, Plus, Lock, Unlock, RefreshCw, Terminal, Cpu } from 'lucide-react';
 
@@ -52,17 +52,28 @@ function App() {
     setDisplayedItemsCount(ITEMS_PER_PAGE);
   }, [activeCategory, searchQuery]);
 
-  const handleSaveProject = async (project: Project) => {
+  const handleSaveProject = async (project: Project, imageFile?: File) => {
     try {
+      let finalImageUrl = project.imageUrl;
+
+      // Realiza o upload da imagem se houver um arquivo selecionado
+      if (imageFile) {
+        finalImageUrl = await uploadImage(imageFile);
+      }
+
+      const projectToSave = { ...project, imageUrl: finalImageUrl };
+
       if (editingProject) {
-        const updated = await updateProject(project);
+        const updated = await updateProject(projectToSave);
         if (updated) setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
       } else {
-        const created = await createProject(project);
+        const created = await createProject(projectToSave);
         if (created) setProjects(prev => [created, ...prev]);
       }
-    } catch (e) {
-      alert("System error saving project components.");
+      setIsFormOpen(false);
+    } catch (e: any) {
+      console.error("Save error:", e);
+      alert("System error saving project components: " + e.message);
     }
   };
 

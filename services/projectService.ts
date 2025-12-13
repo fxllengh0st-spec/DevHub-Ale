@@ -2,6 +2,27 @@ import { supabase } from '../lib/supabaseClient';
 import { Project, Category } from '../types';
 import { projects as mockProjects } from '../data';
 
+export const uploadImage = async (file: File): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `thumbnails/${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('projects')
+    .upload(filePath, file);
+
+  if (error) {
+    console.error('Storage upload error:', error.message);
+    throw new Error('Failed to upload image to storage.');
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('projects')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+};
+
 export const fetchProjects = async (): Promise<Project[]> => {
   try {
     const { data, error } = await supabase
@@ -10,19 +31,14 @@ export const fetchProjects = async (): Promise<Project[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      // Log the specific error message instead of the object to avoid [object Object]
       console.warn('Supabase fetch failed (using mock data):', error.message);
-      if (error.details) console.warn('Error details:', error.details);
-      
       return mockProjects;
     }
 
     if (!data || data.length === 0) {
-      // If the database is empty, return mock data for the portfolio to look good
       return mockProjects;
     }
 
-    // Map database fields to application types
     return data.map((item: any) => ({
       id: item.id,
       title: item.title,
@@ -49,6 +65,7 @@ export const createProject = async (project: Project): Promise<Project | null> =
     tags: project.tags,
     image_url: project.imageUrl,
     demo_url: project.demoUrl,
+    // Fixed property access from project.repo_url to project.repoUrl to match Project interface
     repo_url: project.repoUrl,
     featured: project.featured || false
   };
@@ -79,6 +96,7 @@ export const updateProject = async (project: Project): Promise<Project | null> =
     tags: project.tags,
     image_url: project.imageUrl,
     demo_url: project.demoUrl,
+    // Fixed property access from project.repo_url to project.repoUrl to match Project interface
     repo_url: project.repoUrl,
     featured: project.featured
   };
