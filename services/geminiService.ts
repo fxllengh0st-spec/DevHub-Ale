@@ -3,51 +3,43 @@ import { projects } from "../data";
 
 let chatSession: Chat | null = null;
 
-// Initialize the API client
-// Note: We strictly follow the rule to use process.env.API_KEY without asking the user.
-// In a real deployed environment, this would be set in the build/server variables.
-const apiKey = process.env.API_KEY || ''; 
+// Contexto do sistema injetado para dar "inteligência" sobre os projetos ao assistente
+const systemInstruction = `
+You are the "DevHub Intelligence", a senior-level AI assistant for this portfolio.
+CONTEXT:
+This portfolio showcases 40 professional frontend projects built with React, TypeScript, and modern stacks.
+PROJECT DATA SUMMARY:
+${projects.map(p => `- ${p.title} (${p.category}): ${p.tags.join(', ')}`).join('\n')}
 
-// We prepare a system instruction that gives the AI context about the portfolio.
-const systemContext = `
-You are an intelligent portfolio assistant for a Senior Frontend Engineer.
-Here is the data of the 40 projects in this portfolio:
-${JSON.stringify(projects.map(p => ({ 
-  id: p.id, 
-  title: p.title, 
-  desc: p.description, 
-  tags: p.tags, 
-  category: p.category 
-})))}
-
-Your goal is to help recruiters and visitors find specific projects based on technologies, categories, or complexity.
-- Be concise and professional.
-- If asked about "React" projects, list a few by name.
-- If asked about "Experience", summarize the breadth of projects shown (e.g., "The engineer has extensive experience in E-commerce and Dashboards...").
-- Keep answers under 100 words unless detailed analysis is requested.
+BEHAVIOR:
+1. Be technically precise and concise.
+2. If a user asks for "React projects", suggest 3 specific ones from the list.
+3. If asked about experience, mention that the developer has 40 projects ranging from AI to E-commerce.
+4. Always maintain a dark-mode, tech-focused personality.
+5. Max response length: 120 words.
 `;
 
 export const getChatResponseStream = async (message: string) => {
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please set process.env.API_KEY.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Inicialização tardia para garantir que o process.env.API_KEY esteja disponível no contexto de execução
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   if (!chatSession) {
     chatSession = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
-        systemInstruction: systemContext,
+        systemInstruction: systemInstruction,
+        temperature: 0.7,
+        topP: 0.95,
       },
     });
   }
 
   try {
-    const resultStream = await chatSession.sendMessageStream({ message });
-    return resultStream;
-  } catch (error) {
-    console.error("Gemini API Error:", error);
+    return await chatSession.sendMessageStream({ message });
+  } catch (error: any) {
+    console.error("Gemini Stream Error:", error);
+    // Reset session on critical errors to allow retry
+    chatSession = null;
     throw error;
   }
 };
