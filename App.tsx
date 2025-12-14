@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { ProjectCard } from './components/ProjectCard';
 import { GeminiChat } from './components/GeminiChat';
@@ -11,7 +12,7 @@ import { Search, Layers, Github, Linkedin, Mail, Plus, Lock, Unlock, RefreshCw, 
 const ITEMS_PER_PAGE = 9;
 
 // Interface global para o ambiente AI Studio
-// Fix: Separating AIStudio interface to match the environment's expected type name and using readonly to match existing modifiers.
+// Fix: Removing readonly modifier from aistudio to ensure it matches identical modifiers in the global Window declaration.
 declare global {
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;
@@ -19,7 +20,7 @@ declare global {
   }
 
   interface Window {
-    readonly aistudio: AIStudio;
+    aistudio: AIStudio;
   }
 }
 

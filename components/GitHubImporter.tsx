@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Github, Loader2, X, CheckCircle2, ChevronRight, Sparkles, UserPlus, AlertCircle } from 'lucide-react';
+import { Github, Loader2, X, CheckCircle2, ChevronRight, Sparkles, UserPlus, AlertCircle, Key } from 'lucide-react';
 import { refineProjectsFromGitHub } from '../services/geminiService';
 import { Project, Category } from '../types';
 
@@ -21,6 +22,13 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
 
   const quickProfiles = ['fxllengh0st-spec', 'SandroBreaker'];
 
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setError(null);
+    }
+  };
+
   const fetchRepos = async (targetUsernames?: string) => {
     const names = (targetUsernames || usernames)
       .split(',')
@@ -29,6 +37,15 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
     
     if (names.length === 0) return;
     
+    // Verifica se a chave foi selecionada antes de começar
+    if (window.aistudio) {
+      const hasKey = await window.aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        setError("API Key required. Please select a key before starting the sync.");
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -82,7 +99,12 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
       setStep('preview');
     } catch (e: any) {
       console.error("GitHub Sync Error:", e);
-      setError(e.message || "An unexpected error occurred during synchronization.");
+      // Captura erro específico de falta de chave
+      if (e.message?.includes("API KEY")) {
+        setError("Missing API Key. Please click 'Configure Key' to proceed.");
+      } else {
+        setError(e.message || "An unexpected error occurred during synchronization.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -130,9 +152,22 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
 
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           {error && (
-            <div className="mb-8 p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3 text-rose-500">
-              <AlertCircle className="shrink-0" size={18} />
-              <div className="text-xs font-bold uppercase tracking-wider">{error}</div>
+            <div className="mb-8 p-6 bg-rose-500/10 border border-rose-500/30 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 text-rose-500 animate-pulse">
+              <div className="flex items-center gap-3 text-center sm:text-left">
+                <AlertCircle className="shrink-0" size={24} />
+                <div>
+                   <div className="text-xs font-black uppercase tracking-widest leading-none mb-1">Execution Interrupted</div>
+                   <div className="text-[10px] font-bold opacity-80 uppercase tracking-tighter">{error}</div>
+                </div>
+              </div>
+              {error.includes("Key") && (
+                <button 
+                  onClick={handleSelectKey}
+                  className="px-6 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
+                >
+                  Configure Key
+                </button>
+              )}
             </div>
           )}
 
