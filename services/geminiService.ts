@@ -18,7 +18,7 @@ BEHAVIOR:
 `;
 
 export const getChatResponseStream = async (message: string) => {
-  // Criar instância aqui garante que pegamos a API_KEY mais recente injetada pelo browser
+  // Inicialização no momento da chamada para garantir captura da chave do ambiente
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const chat = ai.chats.create({
@@ -76,6 +76,6 @@ export const refineProjectsFromGitHub = async (repos: any[]): Promise<Partial<Pr
     return JSON.parse(response.text || '[]');
   } catch (e) {
     console.error("Error analyzing projects with Gemini:", e);
-    return [];
+    throw e;
   }
 };
