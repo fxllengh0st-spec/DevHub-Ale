@@ -3,23 +3,33 @@ import { Project, Category } from '../types';
 import { projects as mockProjects } from '../data';
 
 export const uploadImage = async (file: File): Promise<string> => {
-  const fileExt = file.name.split('.').pop();
+  // Gera um nome único mantendo a extensão original
+  const fileExt = file.name.split('.').pop() || 'png';
   const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-  const filePath = `thumbnails/${fileName}`;
+  
+  // Caminho simplificado na raiz do bucket para evitar erros de permissão em pastas
+  const filePath = fileName;
+
+  console.log(`Iniciando upload: ${filePath} (${file.type})`);
 
   const { data, error } = await supabase.storage
     .from('projects')
-    .upload(filePath, file);
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type // Crucial para o Supabase processar o arquivo corretamente
+    });
 
   if (error) {
-    console.error('Storage upload error:', error.message);
-    throw new Error('Failed to upload image to storage.');
+    console.error('Erro detalhado do Supabase Storage:', error);
+    throw new Error(`Erro no Storage: ${error.message}`);
   }
 
   const { data: { publicUrl } } = supabase.storage
     .from('projects')
     .getPublicUrl(filePath);
 
+  console.log('Upload concluído com sucesso. URL:', publicUrl);
   return publicUrl;
 };
 
@@ -65,7 +75,6 @@ export const createProject = async (project: Project): Promise<Project | null> =
     tags: project.tags,
     image_url: project.imageUrl,
     demo_url: project.demoUrl,
-    // Fixed property access from project.repo_url to project.repoUrl to match Project interface
     repo_url: project.repoUrl,
     featured: project.featured || false
   };
@@ -77,7 +86,7 @@ export const createProject = async (project: Project): Promise<Project | null> =
     .single();
 
   if (error) {
-    console.error('Error creating project:', error.message);
+    console.error('Error creating project in DB:', error.message);
     throw error;
   }
 
@@ -96,7 +105,6 @@ export const updateProject = async (project: Project): Promise<Project | null> =
     tags: project.tags,
     image_url: project.imageUrl,
     demo_url: project.demoUrl,
-    // Fixed property access from project.repo_url to project.repoUrl to match Project interface
     repo_url: project.repoUrl,
     featured: project.featured
   };
@@ -109,7 +117,7 @@ export const updateProject = async (project: Project): Promise<Project | null> =
     .single();
 
   if (error) {
-    console.error('Error updating project:', error.message);
+    console.error('Error updating project in DB:', error.message);
     throw error;
   }
 

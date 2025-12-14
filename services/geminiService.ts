@@ -1,9 +1,9 @@
-import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { projects } from "../data";
+import { Category, Project } from "../types";
 
-let chatSession: Chat | null = null;
+let chatSession: null | any = null;
 
-// Contexto do sistema injetado para dar "inteligência" sobre os projetos ao assistente
 const systemInstruction = `
 You are the "DevHub Intelligence", a senior-level AI assistant for this portfolio.
 CONTEXT:
@@ -20,7 +20,6 @@ BEHAVIOR:
 `;
 
 export const getChatResponseStream = async (message: string) => {
-  // Inicialização tardia para garantir que o process.env.API_KEY esteja disponível no contexto de execução
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   if (!chatSession) {
@@ -38,8 +37,50 @@ export const getChatResponseStream = async (message: string) => {
     return await chatSession.sendMessageStream({ message });
   } catch (error: any) {
     console.error("Gemini Stream Error:", error);
-    // Reset session on critical errors to allow retry
     chatSession = null;
     throw error;
+  }
+};
+
+export const refineProjectsFromGitHub = async (repos: any[]): Promise<Partial<Project>[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const prompt = `Analyze these GitHub repositories and transform them into a structured portfolio project format. 
+  For each repo, create a professional title, a compelling 2-line description, 
+  select the most appropriate category from: ${Object.values(Category).filter(c => c !== Category.ALL).join(', ')},
+  and list the key technologies as tags.
+  
+  REPOS:
+  ${JSON.stringify(repos.map(r => ({ name: r.name, desc: r.description, lang: r.language, topics: r.topics })))}
+  `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            category: { type: Type.STRING },
+            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            repoUrl: { type: Type.STRING },
+            demoUrl: { type: Type.STRING }
+          },
+          required: ["title", "description", "category", "tags"]
+        }
+      }
+    }
+  });
+
+  try {
+    return JSON.parse(response.text);
+  } catch (e) {
+    console.error("Error parsing Gemini response:", e);
+    return [];
   }
 };

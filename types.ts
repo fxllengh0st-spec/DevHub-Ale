@@ -27,3 +27,13 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
 }
+
+export interface GitHubRepo {
+  name: string;
+  description: string;
+  html_url: string;
+  homepage: string;
+  language: string;
+  topics: string[];
+  created_at: string;
+}
