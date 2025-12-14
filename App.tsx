@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { ProjectCard } from './components/ProjectCard';
 import { GeminiChat } from './components/GeminiChat';
@@ -152,7 +153,8 @@ function App() {
               ].map((stat, i) => (
                 <div key={i} className="flex flex-col items-center gap-1 group">
                   <div className="p-2.5 sm:p-3 bg-slate-900 rounded-xl sm:rounded-2xl mb-1 sm:mb-2 group-hover:scale-110 transition-transform border border-slate-800">
-                    {React.cloneElement(stat.icon as React.ReactElement, { size: 18, className: (stat.icon as any).props.className })}
+                    {/* Fix: cast element to React.ReactElement<any> to resolve prop overload issues with Lucide icon 'size' property */}
+                    {React.cloneElement(stat.icon as React.ReactElement<any>, { size: 18, className: (stat.icon as any).props.className })}
                   </div>
                   <span className="text-xl sm:text-2xl font-black text-white leading-none">{stat.value}</span>
                   <span className="text-[8px] sm:text-[10px] uppercase font-bold text-slate-500 tracking-widest">{stat.label}</span>

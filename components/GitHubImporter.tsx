@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Github, Loader2, X, CheckCircle2, ChevronRight, Sparkles, UserPlus } from 'lucide-react';
+import { Github, Loader2, X, CheckCircle2, ChevronRight, Sparkles, UserPlus, AlertCircle } from 'lucide-react';
 import { refineProjectsFromGitHub } from '../services/geminiService';
 import { Project, Category } from '../types';
 
@@ -12,6 +12,7 @@ interface GitHubImporterProps {
 export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose, onImport }) => {
   const [usernames, setUsernames] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [foundProjects, setFoundProjects] = useState<Partial<Project>[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
@@ -29,46 +30,59 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
     if (names.length === 0) return;
     
     setIsLoading(true);
+    setError(null);
+    
     try {
       let allRepos: any[] = [];
       
-      // Busca repositórios de todas as contas fornecidas
       for (const name of names) {
-        const response = await fetch(`https://api.github.com/users/${name}/repos?sort=updated&per_page=30`);
+        const response = await fetch(`https://api.github.com/users/${name}/repos?sort=updated&per_page=60`);
+        
+        if (response.status === 403) {
+          throw new Error(`GitHub API rate limit exceeded for ${name}. Try again in a few minutes.`);
+        }
+        
+        if (!response.ok) {
+          throw new Error(`Profile "${name}" not found or unreachable.`);
+        }
+        
         const repos = await response.json();
         if (Array.isArray(repos)) {
-          allRepos = [...allRepos, ...repos];
+          // Filtrar apenas repositórios originais (não forks)
+          const originals = repos.filter(r => !r.fork);
+          allRepos = [...allRepos, ...originals];
         }
       }
 
-      if (allRepos.length === 0) throw new Error("No repositories found");
+      if (allRepos.length === 0) {
+        throw new Error("No public repositories found in these accounts.");
+      }
 
-      // Filtrar forks se necessário (opcional)
-      const originalRepos = allRepos.filter(r => !r.fork);
-
-      // IA analisa os repositórios para criar o conteúdo do portfólio
-      const refined = await refineProjectsFromGitHub(originalRepos);
+      // IA analisa os repositórios
+      const refined = await refineProjectsFromGitHub(allRepos);
       
-      // Mescla links originais e metadados
+      if (!refined || refined.length === 0) {
+        throw new Error("AI analysis failed to structure the project data. Please try again.");
+      }
+
       const finalData = refined.map((p, i) => {
-        // Encontra o repo correspondente no array original para pegar as URLs reais
-        const original = originalRepos.find(r => r.name.toLowerCase() === (p.title || '').toLowerCase()) || originalRepos[i];
+        const original = allRepos.find(r => r.name.toLowerCase() === (p.title || '').toLowerCase()) || allRepos[i];
         
         return {
           ...p,
           repoUrl: original.html_url,
           demoUrl: original.homepage || '',
           createdAt: original.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80' // Placeholder para você trocar depois
+          imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80'
         };
       });
 
       setFoundProjects(finalData);
       setSelectedIndices(new Set(finalData.map((_, i) => i)));
       setStep('preview');
-    } catch (e) {
-      console.error(e);
-      alert("Error accessing GitHub profiles. Check the usernames and try again.");
+    } catch (e: any) {
+      console.error("GitHub Sync Error:", e);
+      setError(e.message || "An unexpected error occurred during synchronization.");
     } finally {
       setIsLoading(false);
     }
@@ -86,6 +100,7 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
     onClose();
     setStep('input');
     setUsernames('');
+    setError(null);
   };
 
   const toggleSelect = (idx: number) => {
@@ -105,7 +120,7 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
               <Github size={28} /> {step === 'input' ? 'MULTI-ACCOUNT SYNC' : 'AI BATCH ANALYSIS'}
             </h2>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-              Consolidating multiple digital identities via Neural Engine
+              Consolidating profiles via Gemini Neural Engine
             </p>
           </div>
           <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all">
@@ -114,6 +129,13 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          {error && (
+            <div className="mb-8 p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3 text-rose-500">
+              <AlertCircle className="shrink-0" size={18} />
+              <div className="text-xs font-bold uppercase tracking-wider">{error}</div>
+            </div>
+          )}
+
           {step === 'input' ? (
             <div className="space-y-10 py-6">
               <div className="text-center space-y-4">
@@ -121,12 +143,11 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
                   <UserPlus size={40} />
                 </div>
                 <div className="space-y-2">
-                   <p className="text-slate-300 font-bold">Import from multiple profiles</p>
-                   <p className="text-slate-500 text-sm max-w-sm mx-auto">Gemini will analyze all repos, create categories, and suggest descriptions for your consolidated portfolio.</p>
+                   <p className="text-slate-300 font-bold">Consolidate your identities</p>
+                   <p className="text-slate-500 text-sm max-w-sm mx-auto">Sync all your public projects. Gemini will structure them for your portfolio.</p>
                 </div>
               </div>
 
-              {/* Atalhos Rápidos para o Usuário */}
               <div className="flex flex-wrap justify-center gap-3">
                  {quickProfiles.map(profile => (
                    <button
@@ -168,14 +189,14 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
                 className="w-full max-w-md mx-auto flex items-center justify-center gap-3 bg-primary hover:bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
               >
                 {isLoading ? <Loader2 className="animate-spin" /> : <ChevronRight />}
-                {isLoading ? 'PROCESSING REPOS...' : 'DISCOVER ALL MODULES'}
+                {isLoading ? 'ANALYZING STACK...' : 'FETCH ALL DATA'}
               </button>
             </div>
           ) : (
             <div className="space-y-4">
                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 flex items-center gap-3 mb-6">
                   <Sparkles size={20} className="text-primary" />
-                  <p className="text-xs text-slate-400 font-medium">Gemini analyzed <b>{foundProjects.length}</b> repositories. Select the ones you want to commit to your public portfolio.</p>
+                  <p className="text-xs text-slate-400 font-medium">Gemini refined <b>{foundProjects.length}</b> projects. Select which ones to publish.</p>
                </div>
                
                {foundProjects.map((p, i) => (
@@ -198,11 +219,6 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
                       </div>
                       <p className="text-xs text-slate-500 line-clamp-1">{p.description}</p>
                     </div>
-                    <div className="flex gap-2">
-                      {p.tags?.slice(0, 2).map(t => (
-                        <span key={t} className="text-[8px] text-primary/80 font-black uppercase">{t}</span>
-                      ))}
-                    </div>
                  </div>
                ))}
             </div>
@@ -212,22 +228,17 @@ export const GitHubImporter: React.FC<GitHubImporterProps> = ({ isOpen, onClose,
         {step === 'preview' && (
           <div className="p-8 border-t border-slate-800 bg-slate-900/20 flex justify-between items-center">
             <button 
-              onClick={() => setStep('input')}
+              onClick={() => { setStep('input'); setError(null); }}
               className="text-xs font-black text-slate-500 uppercase tracking-widest hover:text-white"
             >
-              Back to search
+              Cancel
             </button>
-            <div className="flex items-center gap-6">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                {selectedIndices.size} Modules Ready
-              </span>
-              <button
-                onClick={handleConfirm}
-                className="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/20"
-              >
-                COMMIT TO DATABASE
-              </button>
-            </div>
+            <button
+              onClick={handleConfirm}
+              className="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/20"
+            >
+              SAVE TO PORTFOLIO
+            </button>
           </div>
         )}
       </div>
