@@ -10,14 +10,15 @@ import { Search, Layers, Github, Linkedin, Mail, Plus, Lock, Unlock, RefreshCw, 
 
 const ITEMS_PER_PAGE = 9;
 
-// FIX: Standardizing window.aistudio declaration to avoid modifier conflicts.
-// Using an optional property to ensure compatibility with various environment declarations.
+// Fix for TypeScript error: Subsequent property declarations must have the same type.
+// Property 'aistudio' must be of type 'AIStudio'.
 declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
   interface Window {
-    aistudio?: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
+    aistudio?: AIStudio;
   }
 }
 
@@ -143,7 +144,7 @@ function App() {
               DH
             </div>
             <div className="hidden xs:block">
-              <h1 className="text-sm sm:text-xl font-black text-white tracking-tight uppercase">DevHub</h1>
+              <h1 className="text-sm sm:text-xl font-black text-white tracking-tight uppercase leading-none">DevHub</h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                 <span className="text-[8px] sm:text-[10px] uppercase font-bold text-slate-500 tracking-widest">Live System</span>
@@ -152,14 +153,14 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-6">
-            <button onClick={() => setIsAdmin(!isAdmin)} className={`p-2 rounded-xl border transition-all ${isAdmin ? 'bg-primary/20 border-primary text-primary' : 'bg-slate-900/50 border-slate-800 text-slate-500'}`}>
+            <button onClick={() => setIsAdmin(!isAdmin)} className={`p-2 rounded-xl border transition-all ${isAdmin ? 'bg-primary/20 border-primary text-primary' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:text-slate-300'}`}>
                {isAdmin ? <Unlock size={16} /> : <Lock size={16} />}
             </button>
             <div className="flex gap-2">
-              <a href="#" className="p-2.5 bg-slate-900/50 text-slate-400 hover:text-white rounded-xl border border-slate-800">
+              <a href="#" className="p-2.5 bg-slate-900/50 text-slate-400 hover:text-white rounded-xl border border-slate-800 transition-all">
                 <Github size={18} />
               </a>
-              <a href="#" className="p-2.5 bg-primary text-white rounded-xl shadow-lg">
+              <a href="#" className="p-2.5 bg-primary text-white rounded-xl shadow-lg hover:bg-indigo-600 transition-all">
                 <Mail size={18} />
               </a>
             </div>
@@ -174,22 +175,23 @@ function App() {
             <span className="inline-block px-4 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-[10px] font-bold text-primary mb-8 uppercase tracking-[0.3em]">
               Senior Frontend Architect
             </span>
-            <h2 className="text-4xl sm:text-7xl font-black mb-8 tracking-tighter text-white leading-tight">
-              Consolidating <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-emerald-400">40+ Premium Modules.</span>
+            {/* Título refinado para remover o bloco sólido e usar gradiente limpo */}
+            <h2 className="text-4xl sm:text-7xl font-black mb-8 tracking-tighter text-white leading-[1.1]">
+              <span className="opacity-90">Consolidating</span> <br/> 
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-emerald-400">40+ Premium Modules.</span>
             </h2>
-            <p className="max-w-2xl mx-auto text-slate-400 text-lg font-medium leading-relaxed mb-12">
-              High-performance frontend ecosystem. Every project is a verified architectural module.
+            <p className="max-w-2xl mx-auto text-slate-400 text-base sm:text-lg font-medium leading-relaxed mb-12 px-4">
+              High-performance frontend ecosystem. Every project is a verified architectural module designed for scale.
             </p>
             
-            <div className="flex flex-wrap justify-center gap-12">
+            <div className="flex flex-wrap justify-center gap-8 sm:gap-12">
               {[
                 { label: 'Verified', value: projects.length.toString(), icon: <Layers className="text-primary" /> },
                 { label: 'Stack', value: 'React 19', icon: <Cpu className="text-emerald-500" /> },
                 { label: 'Health', value: '99.9%', icon: <RefreshCw className="text-rose-500" /> }
               ].map((stat, i) => (
-                <div key={i} className="flex flex-col items-center">
-                  <div className="p-3 bg-slate-900 rounded-2xl mb-2 border border-slate-800">
-                    {/* FIX: Cast icon to React.ReactElement<any> to resolve size property overload mismatch */}
+                <div key={i} className="flex flex-col items-center group">
+                  <div className="p-3 bg-slate-900 rounded-2xl mb-2 border border-slate-800 group-hover:scale-110 transition-transform">
                     {React.cloneElement(stat.icon as React.ReactElement<any>, { size: 18 })}
                   </div>
                   <span className="text-2xl font-black text-white">{stat.value}</span>
@@ -204,7 +206,13 @@ function App() {
           <div className="glass p-3 rounded-2xl flex flex-col lg:flex-row gap-4 justify-between items-center border border-white/5">
             <div className="flex overflow-x-auto w-full lg:w-auto gap-2 no-scrollbar">
               {Object.values(Category).map((cat) => (
-                <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>
+                <button 
+                  key={cat} 
+                  onClick={() => setActiveCategory(cat)} 
+                  className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                    activeCategory === cat ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-slate-800/50'
+                  }`}
+                >
                   {cat}
                 </button>
               ))}
@@ -213,26 +221,33 @@ function App() {
             <div className="flex gap-3 w-full lg:w-auto">
               {isAdmin && (
                 <>
-                  <button onClick={() => setIsGithubOpen(true)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white border border-slate-800 rounded-xl text-[10px] font-black tracking-widest">
+                  <button onClick={() => setIsGithubOpen(true)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white border border-slate-800 rounded-xl text-[10px] font-black tracking-widest hover:bg-slate-800 transition-all">
                     <Zap size={14} className="text-primary" /> SYNC GITHUB
                   </button>
-                  <button onClick={() => {setEditingProject(null); setIsFormOpen(true)}} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black tracking-widest shadow-lg shadow-emerald-600/20">
+                  <button onClick={() => {setEditingProject(null); setIsFormOpen(true)}} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black tracking-widest shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition-all">
                     <Plus size={14} /> NEW MODULE
                   </button>
                 </>
               )}
               <div className="relative flex-1 lg:w-64">
                 <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input type="text" placeholder="Filter tech..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] font-bold text-white outline-none focus:ring-2 focus:ring-primary/50" />
+                <input 
+                  type="text" 
+                  placeholder="Filter tech stack..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] font-bold text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-700" 
+                />
               </div>
             </div>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        {/* Grid de Projetos: Ajustado para acomodar os cards mais altos de proporção 9:16 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
           {isLoading ? (
             [...Array(6)].map((_, i) => (
-              <div key={i} className="h-[450px] bg-slate-900/50 rounded-[2.5rem] animate-pulse border border-slate-800"></div>
+              <div key={i} className="aspect-[9/16] bg-slate-900/50 rounded-[2.5rem] animate-pulse border border-slate-800"></div>
             ))
           ) : (
             visibleProjects.map((project, idx) => (
@@ -241,7 +256,7 @@ function App() {
                   project={project} 
                   isAdmin={isAdmin}
                   onEdit={(p) => {setEditingProject(p); setIsFormOpen(true)}}
-                  onDelete={async (id) => { if(confirm('Purge module?')) { await deleteProject(id); loadData(); } }}
+                  onDelete={async (id) => { if(confirm('Purge module from core?')) { await deleteProject(id); loadData(); } }}
                 />
               </div>
             ))
@@ -250,7 +265,7 @@ function App() {
 
         {hasMore && !isLoading && (
           <div className="mt-24 text-center">
-            <button onClick={handleLoadMore} className="px-12 py-5 glass border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-[0.3em] hover:bg-primary transition-all">
+            <button onClick={handleLoadMore} className="px-12 py-5 glass border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-[0.3em] hover:bg-primary transition-all shadow-2xl">
               Load More Modules
             </button>
           </div>

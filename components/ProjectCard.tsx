@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Project } from '../types';
 import { 
@@ -13,7 +14,6 @@ interface ProjectCardProps {
   onDelete?: (id: string) => void;
 }
 
-// Mapeamento de ícones para tecnologias comuns
 const getTechIcon = (tech: string) => {
   const t = tech.toLowerCase();
   if (t.includes('react')) return <Cpu size={12} />;
@@ -37,44 +37,49 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, isAdmin, onEd
   return (
     <div className="group relative bg-surface border border-slate-800/50 rounded-[2.5rem] overflow-hidden hover:border-primary/40 transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(99,102,241,0.2)] flex flex-col h-full active:scale-[0.99]">
       
-      {/* Admin Overlay Controls */}
       {isAdmin && (
         <div className="absolute top-6 left-6 z-30 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0">
           <button 
             onClick={(e) => { e.stopPropagation(); onEdit?.(project); }}
-            className="p-3 bg-blue-500/90 hover:bg-blue-600 text-white rounded-2xl shadow-xl backdrop-blur-md transition-all hover:scale-110 active:scale-90"
-            title="Refine Module"
+            className="p-3 bg-blue-500/90 hover:bg-blue-600 text-white rounded-2xl shadow-xl backdrop-blur-md transition-all hover:scale-110"
           >
             <Edit2 size={16} />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete?.(project.id); }}
-            className="p-3 bg-rose-500/90 hover:bg-rose-600 text-white rounded-2xl shadow-xl backdrop-blur-md transition-all hover:scale-110 active:scale-90"
-            title="Purge Module"
+            className="p-3 bg-rose-500/90 hover:bg-rose-600 text-white rounded-2xl shadow-xl backdrop-blur-md transition-all hover:scale-110"
           >
             <Trash2 size={16} />
           </button>
         </div>
       )}
 
-      {/* Image Context with Advanced Gradients */}
-      <div className="relative h-60 overflow-hidden">
+      {/* Image Context: Ajustado para 9:16 (Proporção Mobile) com visualização inteira */}
+      <div className="relative aspect-[9/16] overflow-hidden bg-slate-950">
+        {/* Camada de fundo (Blur) para preencher espaços se a imagem não for exatamente 9:16 */}
+        <img 
+          src={project.imageUrl} 
+          alt="" 
+          className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110"
+        />
+        
+        {/* Imagem Principal: Mostra o print inteiro */}
         <img 
           src={project.imageUrl} 
           alt={project.title} 
-          className="w-full h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110"
+          className="relative w-full h-full object-contain transition-transform duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.03]"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent opacity-90" />
         
-        {/* Category Badge */}
+        {/* Overlay de gradiente para suavizar a transição com o card */}
+        <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-90" />
+        
         <div className="absolute bottom-6 left-8 z-10 flex items-center gap-2">
             <span className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl bg-primary/20 text-primary backdrop-blur-xl border border-primary/30 shadow-lg shadow-primary/10">
                 {project.category}
             </span>
         </div>
         
-        {/* Quick Action Overlay */}
         {project.demoUrl && (
           <a 
             href={project.demoUrl} 
@@ -87,7 +92,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, isAdmin, onEd
         )}
       </div>
 
-      {/* Content Architecture */}
       <div className="p-8 flex flex-col flex-grow">
         <div className="mb-4">
           <h3 className="text-2xl font-black text-white mb-2 group-hover:text-primary transition-colors leading-tight line-clamp-1 tracking-tight">
@@ -103,7 +107,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, isAdmin, onEd
           {project.description}
         </p>
 
-        {/* Tech Stack Upgrade: Integrated Icons & Dropdown Logic */}
         <div className="relative mt-auto">
           <div className={`flex flex-wrap gap-2 transition-all duration-500 ${showFullStack ? 'mb-4' : 'mb-0'}`}>
             {displayTags.map((tag) => (
@@ -120,7 +123,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, isAdmin, onEd
             
             {hasMoreTags && !showFullStack && (
               <button 
-                onClick={() => setShowFullStack(true)}
+                onClick={(e) => { e.stopPropagation(); setShowFullStack(true); }}
                 className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-primary/40 hover:text-white transition-all group/more"
               >
                 +{project.tags.length - 3} Stack
@@ -131,7 +134,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, isAdmin, onEd
 
           {showFullStack && (
             <button 
-              onClick={() => setShowFullStack(false)}
+              onClick={(e) => { e.stopPropagation(); setShowFullStack(false); }}
               className="mt-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
             >
               <ChevronUp size={12} />
@@ -140,7 +143,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, isAdmin, onEd
           )}
         </div>
 
-        {/* Footer Metrics & Actions */}
         <div className="flex items-center justify-between pt-8 border-t border-slate-800/60 mt-8">
           <div className="flex gap-5">
              {project.repoUrl && (
