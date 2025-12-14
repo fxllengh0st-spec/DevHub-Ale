@@ -2,42 +2,38 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { projects } from "../data";
 import { Category, Project } from "../types";
 
-let chatSession: null | any = null;
-
-const systemInstruction = `
+const getSystemInstruction = () => `
 You are the "DevHub Intelligence", a senior-level AI assistant for this portfolio.
 CONTEXT:
-This portfolio showcases 40 professional frontend projects built with React, TypeScript, and modern stacks.
+This portfolio showcases professional frontend projects built with React, TypeScript, and modern stacks.
 PROJECT DATA SUMMARY:
 ${projects.map(p => `- ${p.title} (${p.category}): ${p.tags.join(', ')}`).join('\n')}
 
 BEHAVIOR:
 1. Be technically precise and concise.
 2. If a user asks for "React projects", suggest 3 specific ones from the list.
-3. If asked about experience, mention that the developer has 40 projects ranging from AI to E-commerce.
+3. If asked about experience, mention that the developer has a solid collection of projects ranging from AI to E-commerce.
 4. Always maintain a dark-mode, tech-focused personality.
 5. Max response length: 120 words.
 `;
 
 export const getChatResponseStream = async (message: string) => {
+  // Criar instância aqui garante que pegamos a API_KEY mais recente injetada pelo browser
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  if (!chatSession) {
-    chatSession = ai.chats.create({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.7,
-        topP: 0.95,
-      },
-    });
-  }
+  
+  const chat = ai.chats.create({
+    model: 'gemini-2.5-flash',
+    config: {
+      systemInstruction: getSystemInstruction(),
+      temperature: 0.7,
+      topP: 0.95,
+    },
+  });
 
   try {
-    return await chatSession.sendMessageStream({ message });
+    return await chat.sendMessageStream({ message });
   } catch (error: any) {
     console.error("Gemini Stream Error:", error);
-    chatSession = null;
     throw error;
   }
 };
@@ -54,33 +50,32 @@ export const refineProjectsFromGitHub = async (repos: any[]): Promise<Partial<Pr
   ${JSON.stringify(repos.map(r => ({ name: r.name, desc: r.description, lang: r.language, topics: r.topics })))}
   `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            category: { type: Type.STRING },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-            repoUrl: { type: Type.STRING },
-            demoUrl: { type: Type.STRING }
-          },
-          required: ["title", "description", "category", "tags"]
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              category: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              repoUrl: { type: Type.STRING },
+              demoUrl: { type: Type.STRING }
+            },
+            required: ["title", "description", "category", "tags"]
+          }
         }
       }
-    }
-  });
-
-  try {
-    return JSON.parse(response.text);
+    });
+    return JSON.parse(response.text || '[]');
   } catch (e) {
-    console.error("Error parsing Gemini response:", e);
+    console.error("Error analyzing projects with Gemini:", e);
     return [];
   }
 };

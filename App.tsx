@@ -6,13 +6,27 @@ import { ProjectForm } from './components/ProjectForm';
 import { GitHubImporter } from './components/GitHubImporter';
 import { fetchProjects, createProject, updateProject, deleteProject, uploadImage } from './services/projectService';
 import { Category, Project } from './types';
-import { Search, Layers, Github, Linkedin, Mail, Plus, Lock, Unlock, RefreshCw, Terminal, Cpu, Zap } from 'lucide-react';
+import { Search, Layers, Github, Linkedin, Mail, Plus, Lock, Unlock, RefreshCw, Terminal, Cpu, Zap, Key, ExternalLink } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 9;
+
+// Interface global para o ambiente AI Studio
+// Fix: Separating AIStudio interface to match the environment's expected type name and using readonly to match existing modifiers.
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+
+  interface Window {
+    readonly aistudio: AIStudio;
+  }
+}
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasKey, setHasKey] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category>(Category.ALL);
   const [searchQuery, setSearchQuery] = useState('');
   const [displayedItemsCount, setDisplayedItemsCount] = useState(ITEMS_PER_PAGE);
@@ -22,8 +36,23 @@ function App() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
+    checkApiKey();
     loadData();
   }, []);
+
+  const checkApiKey = async () => {
+    if (window.aistudio) {
+      const selected = await window.aistudio.hasSelectedApiKey();
+      setHasKey(selected);
+    }
+  };
+
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setHasKey(true); // Assume sucesso após abertura do diálogo
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -58,13 +87,10 @@ function App() {
   const handleSaveProject = async (project: Project, imageFile?: File) => {
     try {
       let finalImageUrl = project.imageUrl;
-
       if (imageFile) {
         finalImageUrl = await uploadImage(imageFile);
       }
-
       const projectToSave = { ...project, imageUrl: finalImageUrl };
-
       if (editingProject) {
         const updated = await updateProject(projectToSave);
         if (updated) setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -96,7 +122,36 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-slate-200">
       
-      <header className="fixed top-0 z-[100] w-full glass">
+      {/* API Key Configuration Banner */}
+      {!hasKey && (
+        <div className="fixed top-0 left-0 w-full z-[200] bg-primary/20 backdrop-blur-xl border-b border-primary/30 py-3 px-4 animate-fade-down">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Key size={18} className="text-primary animate-pulse" />
+              <p className="text-[10px] sm:text-xs font-bold text-white uppercase tracking-widest">
+                AI Intelligence Offline: API Key required to analyze repositories.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <a 
+                href="https://ai.google.dev/gemini-api/docs/billing" 
+                target="_blank" 
+                className="text-[9px] font-black text-slate-400 hover:text-white flex items-center gap-1 uppercase tracking-tighter transition-colors"
+              >
+                Billing Info <ExternalLink size={10} />
+              </a>
+              <button 
+                onClick={handleSelectKey}
+                className="px-6 py-2 bg-primary hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-primary/20 transition-all"
+              >
+                Configure Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <header className={`fixed top-0 z-[100] w-full glass transition-all ${!hasKey ? 'mt-16 sm:mt-12' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-tr from-primary to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-black shadow-xl shadow-primary/20 rotate-3 shrink-0">
@@ -130,7 +185,7 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 pt-28 sm:pt-40 pb-20">
+      <main className={`max-w-7xl mx-auto px-4 pt-28 sm:pt-40 pb-20 transition-all ${!hasKey ? 'mt-12' : ''}`}>
         
         <section className="mb-20 sm:mb-32 text-center relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[300px] sm:h-[400px] bg-primary/10 blur-[100px] sm:blur-[150px] rounded-full pointer-events-none"></div>
@@ -142,7 +197,7 @@ function App() {
               Engineering <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-emerald-400">Precision UI.</span>
             </h2>
             <p className="max-w-2xl mx-auto text-slate-400 text-base sm:text-lg md:text-xl font-medium leading-relaxed mb-10 sm:mb-12 px-4">
-              Consolidating 40+ modular projects, high-performance dashboards, and AI-integrated systems built with the modern stack.
+              Consolidating modular projects, high-performance dashboards, and AI-integrated systems built with the modern stack.
             </p>
             
             <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
@@ -153,7 +208,6 @@ function App() {
               ].map((stat, i) => (
                 <div key={i} className="flex flex-col items-center gap-1 group">
                   <div className="p-2.5 sm:p-3 bg-slate-900 rounded-xl sm:rounded-2xl mb-1 sm:mb-2 group-hover:scale-110 transition-transform border border-slate-800">
-                    {/* Fix: cast element to React.ReactElement<any> to resolve prop overload issues with Lucide icon 'size' property */}
                     {React.cloneElement(stat.icon as React.ReactElement<any>, { size: 18, className: (stat.icon as any).props.className })}
                   </div>
                   <span className="text-xl sm:text-2xl font-black text-white leading-none">{stat.value}</span>
