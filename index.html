@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="pt-br" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DevHub | Senior Frontend Portfolio</title>
+    <title>DevHub | 40+ Projetos Frontend Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -12,53 +12,91 @@
           extend: {
             colors: {
               background: '#020617',
-              surface: '#0f172a',
+              surface: '#0a0f1e',
               primary: '#6366f1',
               secondary: '#10b981',
               accent: '#f43f5e',
+              border: '#1e293b',
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+              display: ['Inter', 'sans-serif'],
             },
+            animation: {
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'glow': 'glow 2s ease-in-out infinite alternate',
+            },
+            keyframes: {
+              glow: {
+                '0%': { boxShadow: '0 0 5px rgba(99, 102, 241, 0.2)' },
+                '100%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.6)' },
+              }
+            }
           },
         },
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --primary-glow: conic-gradient(from 180deg at 50% 50%, #6366f1 0deg, #a855f7 90deg, #ec4899 180deg, #6366f1 360deg);
+      }
+      
       body {
         font-family: 'Inter', sans-serif;
         background-color: #020617;
         color: #f8fafc;
         overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
       }
-      ::-webkit-scrollbar { width: 6px; }
+
+      ::-webkit-scrollbar { width: 5px; }
       ::-webkit-scrollbar-track { background: #020617; }
       ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
       ::-webkit-scrollbar-thumb:hover { background: #334155; }
       
       .glass {
-        background: rgba(15, 23, 42, 0.85); /* Opacidade aumentada de 0.7 para 0.85 */
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(10, 15, 30, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
       }
 
-      .animate-float {
-        animation: float 6s ease-in-out infinite;
+      .text-gradient {
+        background: linear-gradient(to right, #ffffff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
 
-      @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-20px); }
+      .grid-pattern {
+        background-image: radial-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px);
+        background-size: 40px 40px;
       }
 
       @keyframes fade-up {
-        from { opacity: 0; transform: translateY(30px); }
+        from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
       }
+      
       .animate-fade-up {
-        animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+
+      .hero-glow {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15), transparent 70%);
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
     <script type="importmap">

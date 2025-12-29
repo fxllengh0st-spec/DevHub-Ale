@@ -3,26 +3,27 @@ import { projects } from "../data";
 import { Category, Project } from "../types";
 
 const getSystemInstruction = () => `
-You are the "DevHub Intelligence", a senior-level AI assistant for this portfolio.
-CONTEXT:
-This portfolio showcases professional frontend projects built with React, TypeScript, and modern stacks.
-PROJECT DATA SUMMARY:
-${projects.map(p => `- ${p.title} (${p.category}): ${p.tags.join(', ')}`).join('\n')}
+Você é a "DevHub Intelligence", assistente de IA sênior deste portfólio.
+CONTEXTO:
+Este portfólio exibe projetos frontend profissionais construídos com React, TypeScript e stacks modernas.
+RESUMO DOS PROJETOS:
+${projects.slice(0, 10).map(p => `- ${p.title} (${p.category}): ${p.tags.join(', ')}`).join('\n')}
+(Nota: Existem mais de 40 projetos no total).
 
-BEHAVIOR:
-1. Be technically precise and concise.
-2. If a user asks for "React projects", suggest 3 specific ones from the list.
-3. If asked about experience, mention that the developer has a solid collection of projects ranging from AI to E-commerce.
-4. Always maintain a dark-mode, tech-focused personality.
-5. Max response length: 120 words.
+COMPORTAMENTO:
+1. Seja tecnicamente preciso e responda em Português do Brasil.
+2. Seja conciso e use um tom profissional e tech-focused.
+3. Se o usuário perguntar por projetos específicos (ex: "projetos com React"), sugira 3 da lista.
+4. Explique a arquitetura focando em performance, acessibilidade e design modular.
+5. Mantenha as respostas abaixo de 120 palavras.
+6. Nunca invente informações sobre o desenvolvedor que não estejam sugeridas pelo contexto de "Senior Frontend Architecture".
 `;
 
 export const getChatResponseStream = async (message: string) => {
-  // Inicialização no momento da chamada para garantir captura da chave do ambiente
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const chat = ai.chats.create({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     config: {
       systemInstruction: getSystemInstruction(),
       temperature: 0.7,
@@ -41,10 +42,10 @@ export const getChatResponseStream = async (message: string) => {
 export const refineProjectsFromGitHub = async (repos: any[]): Promise<Partial<Project>[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const prompt = `Analyze these GitHub repositories and transform them into a structured portfolio project format. 
-  For each repo, create a professional title, a compelling 2-line description, 
-  select the most appropriate category from: ${Object.values(Category).filter(c => c !== Category.ALL).join(', ')},
-  and list the key technologies as tags.
+  const prompt = `Analise estes repositórios do GitHub e transforme-os em um formato estruturado de projeto de portfólio. 
+  Para cada repo, crie um título profissional, uma descrição impactante de 2 linhas, 
+  selecione a categoria mais apropriada de: ${Object.values(Category).filter(c => c !== Category.ALL).join(', ')},
+  e liste as principais tecnologias como tags.
   
   REPOS:
   ${JSON.stringify(repos.map(r => ({ name: r.name, desc: r.description, lang: r.language, topics: r.topics })))}
@@ -52,7 +53,7 @@ export const refineProjectsFromGitHub = async (repos: any[]): Promise<Partial<Pr
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
