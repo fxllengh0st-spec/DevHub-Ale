@@ -3,25 +3,19 @@ import { Project, Category } from '../types';
 import { projects as mockProjects } from '../data';
 
 export const uploadImage = async (file: File): Promise<string> => {
-  // Gera um nome único mantendo a extensão original
   const fileExt = file.name.split('.').pop() || 'png';
   const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-  
-  // Caminho simplificado na raiz do bucket para evitar erros de permissão em pastas
   const filePath = fileName;
-
-  console.log(`Iniciando upload: ${filePath} (${file.type})`);
 
   const { data, error } = await supabase.storage
     .from('projects')
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false,
-      contentType: file.type // Crucial para o Supabase processar o arquivo corretamente
+      contentType: file.type
     });
 
   if (error) {
-    console.error('Erro detalhado do Supabase Storage:', error);
     throw new Error(`Erro no Storage: ${error.message}`);
   }
 
@@ -29,16 +23,18 @@ export const uploadImage = async (file: File): Promise<string> => {
     .from('projects')
     .getPublicUrl(filePath);
 
-  console.log('Upload concluído com sucesso. URL:', publicUrl);
   return publicUrl;
 };
 
 export const fetchProjects = async (): Promise<Project[]> => {
   try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Timeout de segurança para evitar espera infinita em caso de erro de rede silencioso
+    const fetchWithTimeout = Promise.race([
+      supabase.from('projects').select('*').order('created_at', { ascending: false }),
+      new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+    ]);
+
+    const { data, error } = await fetchWithTimeout;
 
     if (error) {
       console.warn('Supabase fetch failed (using mock data):', error.message);
@@ -62,7 +58,8 @@ export const fetchProjects = async (): Promise<Project[]> => {
       createdAt: item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
     }));
   } catch (err) {
-    console.warn('Unexpected error in fetchProjects, using mock data:', err);
+    // Captura erros de rede como ERR_NAME_NOT_RESOLVED (DNS) que lançam TypeError no browser
+    console.warn('Network or Supabase error, using mock data:', err instanceof Error ? err.message : 'Unknown error');
     return mockProjects;
   }
 };
@@ -86,7 +83,6 @@ export const createProject = async (project: Project): Promise<Project | null> =
     .single();
 
   if (error) {
-    console.error('Error creating project in DB:', error.message);
     throw error;
   }
 
@@ -98,6 +94,7 @@ export const createProject = async (project: Project): Promise<Project | null> =
 };
 
 export const updateProject = async (project: Project): Promise<Project | null> => {
+  // Ajuste das propriedades do payload: chaves em snake_case para o Supabase, valores em camelCase do tipo Project
   const payload = {
     title: project.title,
     description: project.description,
@@ -117,7 +114,6 @@ export const updateProject = async (project: Project): Promise<Project | null> =
     .single();
 
   if (error) {
-    console.error('Error updating project in DB:', error.message);
     throw error;
   }
 
@@ -134,7 +130,6 @@ export const deleteProject = async (id: string): Promise<boolean> => {
     .eq('id', id);
 
   if (error) {
-    console.error('Error deleting project:', error.message);
     return false;
   }
   return true;

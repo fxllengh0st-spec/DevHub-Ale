@@ -19,8 +19,16 @@ COMPORTAMENTO:
 6. Nunca invente informações sobre o desenvolvedor que não estejam sugeridas pelo contexto de "Senior Frontend Architecture".
 `;
 
+const getApiKey = () => {
+  const key = process.env.API_KEY;
+  if (!key) {
+    throw new Error("API Key não configurada. Por favor, utilize o botão 'Configurar Chave' no topo da página.");
+  }
+  return key;
+};
+
 export const getChatResponseStream = async (message: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   
   const chat = ai.chats.create({
     model: 'gemini-3-flash-preview',
@@ -40,7 +48,7 @@ export const getChatResponseStream = async (message: string) => {
 };
 
 export const refineProjectsFromGitHub = async (repos: any[]): Promise<Partial<Project>[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   
   const prompt = `Analise estes repositórios do GitHub e transforme-os em um formato estruturado de projeto de portfólio. 
   Para cada repo, crie um título profissional, uma descrição impactante de 2 linhas, 
